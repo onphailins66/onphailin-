@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PTT Smart Station</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ptt-red:#e8001c; --ptt-blue:#003087; --ptt-yellow:#ffd700;
+  --bg:#f0f4f8; --card:#fff; --text:#1a2340; --muted:#6b7a99;
+  --green:#00b86b; --orange:#ff8c00;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Prompt',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+
+.header{height:64px;background:var(--ptt-blue);display:flex;align-items:center;
+  justify-content:space-between;padding:0 24px;box-shadow:0 2px 12px rgba(0,0,0,.25);z-index:1000;position:relative}
+.logo-circle{width:40px;height:40px;background:var(--ptt-red);border-radius:50%;display:flex;
+  align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;
+  border:2px solid var(--ptt-yellow);margin-right:12px}
+.header-title{color:#fff;font-size:18px;font-weight:700}
+.header-title span{color:var(--ptt-yellow)}
+.header-left{display:flex;align-items:center}
+.header-btn{background:var(--ptt-red);color:#fff;border:none;padding:8px 18px;border-radius:8px;
+  font-family:'Prompt',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:.2s}
+.header-btn:hover{background:#c0001a;transform:translateY(-1px)}
+
+.layout{display:flex;height:calc(100vh - 64px)}
+.sidebar{width:340px;background:#fff;display:flex;flex-direction:column;
+  border-right:1px solid #dde4ef;z-index:100}
+.sidebar-tabs{display:flex;border-bottom:2px solid #eef2f8}
+.tab-btn{flex:1;padding:14px 8px;border:none;background:none;font-family:'Prompt',sans-serif;
+  font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;
+  margin-bottom:-2px;transition:.2s}
+.tab-btn.active{color:var(--ptt-blue);border-bottom-color:var(--ptt-blue)}
+.sidebar-content{flex:1;overflow-y:auto;padding:16px}
+
+.pump-card{background:#f8fafd;border:1.5px solid #e2e8f5;border-radius:12px;padding:14px;
+  margin-bottom:12px;cursor:pointer;transition:.2s}
+.pump-card:hover{border-color:var(--ptt-blue);box-shadow:0 4px 16px rgba(0,48,135,.12);transform:translateY(-1px)}
+.pump-name{font-size:13px;font-weight:700;color:var(--ptt-blue);margin-bottom:8px}
+.fuel-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;
+  border-bottom:1px solid #edf1f8;font-size:12px}
+.fuel-row:last-child{border-bottom:none}
+.fuel-name{color:var(--muted);flex:1}
+.fuel-price{font-weight:700;min-width:70px;text-align:right}
+.fuel-stock{min-width:70px;text-align:right;font-size:11px;font-weight:600}
+.stock-ok{color:var(--green)}.stock-low{color:var(--orange)}.stock-out{color:var(--ptt-red)}
+.updated-at{font-size:10px;color:#aab2c8;margin-top:8px}
+.section-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.8px;padding:4px 0 10px}
+
+.map-area{flex:1;position:relative}
+#map{width:100%;height:100%}
+
+.overlay{position:fixed;inset:0;background:rgba(0,30,80,.55);z-index:9000;
+  display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;
+  transition:opacity .25s;padding:20px}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:520px;max-height:90vh;
+  overflow-y:auto;box-shadow:0 24px 80px rgba(0,30,100,.3);transform:translateY(20px);transition:transform .3s}
+.overlay.open .modal{transform:translateY(0)}
+.modal-header{background:var(--ptt-blue);color:#fff;padding:20px 24px;border-radius:16px 16px 0 0;
+  display:flex;align-items:center;justify-content:space-between}
+.modal-header h2{font-size:16px;font-weight:700}
+.modal-close{background:rgba(255,255,255,.15);border:none;color:#fff;width:32px;height:32px;
+  border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.modal-body{padding:24px}
+
+.form-group{margin-bottom:18px}
+.form-label{display:block;font-size:12px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.form-select,.form-input{width:100%;padding:10px 14px;border:1.5px solid #dde4ef;border-radius:8px;
+  font-family:'Prompt',sans-serif;font-size:13px;color:var(--text);transition:.2s;background:#fff}
+.form-select:focus,.form-input:focus{outline:none;border-color:var(--ptt-blue)}
+
+.fuel-section{border:1.5px solid #eef2f8;border-radius:10px;padding:14px;margin-bottom:12px}
+.fuel-section-title{font-size:12px;font-weight:700;margin-bottom:12px}
+.fuel-inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stock-options{display:flex;gap:6px}
+.stock-chip{flex:1;padding:7px 2px;border:1.5px solid #dde4ef;border-radius:8px;
+  font-family:'Prompt',sans-serif;font-size:10px;font-weight:600;cursor:pointer;text-align:center;
+  transition:.18s;background:#fff;color:var(--muted)}
+.stock-chip.ok.selected{background:#e6f9f1;border-color:var(--green);color:var(--green)}
+.stock-chip.low.selected{background:#fff4e0;border-color:var(--orange);color:var(--orange)}
+.stock-chip.out.selected{background:#fff0f2;border-color:var(--ptt-red);color:var(--ptt-red)}
+
+.submit-btn{width:100%;padding:14px;background:var(--ptt-blue);color:#fff;border:none;
+  border-radius:10px;font-family:'Prompt',sans-serif;font-size:15px;font-weight:700;cursor:pointer;
+  transition:.2s;margin-top:8px}
+.submit-btn:hover{background:#002070;transform:translateY(-1px)}
+
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(100px);
+  background:var(--green);color:#fff;padding:12px 28px;border-radius:40px;font-weight:600;
+  font-size:14px;z-index:99999;transition:transform .35s cubic-bezier(.17,.67,.55,1.2)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+#loadingMap{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  text-align:center;color:var(--muted);font-size:14px;z-index:10}
+.spinner{width:36px;height:36px;border:3px solid #e2e8f5;border-top-color:var(--ptt-blue);
+  border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.user-dot{width:16px;height:16px;background:#2563eb;border:3px solid #fff;border-radius:50%;
+  box-shadow:0 0 0 4px rgba(37,99,235,.3)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo-circle">PTT</div>
+    <div class="header-title">Smart <span>Station</span></div>
+  </div>
+  <button class="header-btn" onclick="openModal()">✏️ อัปเดตข้อมูลปั๊ม</button>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-tabs">
+      <button class="tab-btn active" onclick="switchTab('list',this)">📋 รายการปั๊ม</button>
+      <button class="tab-btn" onclick="switchTab('price',this)">⛽ ราคาน้ำมัน</button>
+    </div>
+    <div class="sidebar-content" id="listTab">
+      <div class="section-label">ปั๊มในพิษณุโลก</div>
+      <div id="pumpList"></div>
+    </div>
+    <div class="sidebar-content" id="priceTab" style="display:none">
+      <div class="section-label">ราคาน้ำมัน ณ วันนี้</div>
+      <div id="priceTable"></div>
+    </div>
+  </div>
+
+  <div class="map-area">
+    <div id="map"></div>
+    <div id="loadingMap">
+      <div class="spinner"></div>
+      กำลังโหลดแผนที่...
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>📝 อัปเดตข้อมูลปั๊ม</h2>
+      <button class="modal-close" onclick="closeOverlay()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">เลือกสาขาของคุณ</label>
+        <select class="form-select" id="selectStation" onchange="buildFuelForms()">
+          <option value="">-- กรุณาเลือก --</option>
+        </select>
+      </div>
+      <div id="fuelForms"></div>
+      <button class="submit-btn" onclick="submitUpdate()">💾 บันทึกข้อมูล</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">✅ บันทึกข้อมูลเรียบร้อยแล้ว!</div>
+
+<script>
+const FUELS = [
+  {key:'diesel',    label:'ดีเซล B7',      color:'#f59e0b'},
+  {key:'diesel_b20',label:'ดีเซล B20',     color:'#d97706'},
+  {key:'g95',       label:'แก๊สโซฮอล์ 95', color:'#10b981'},
+  {key:'g91',       label:'แก๊สโซฮอล์ 91', color:'#3b82f6'},
+  {key:'e20',       label:'E20',            color:'#8b5cf6'},
+  {key:'e85',       label:'E85',            color:'#ec4899'},
+  {key:'lpg',       label:'LPG',            color:'#6b7280'},
+];
+
+let stations = [
+  {id:1,name:'PTT สาขา ม.นเรศวร',lat:16.7449,lng:100.1935,
+   fuels:{diesel:{stock:'ok',price:29.94},diesel_b20:{stock:'ok',price:28.04},g95:{stock:'ok',price:40.62},
+          g91:{stock:'low',price:35.62},e20:{stock:'ok',price:33.44},e85:{stock:'out',price:22.34},lpg:{stock:'ok',price:18.13}},
+   updated:'วันนี้ 08:30'},
+  {id:2,name:'PTT สาขา แยกอินโดจีน',lat:16.8665,lng:100.2387,
+   fuels:{diesel:{stock:'ok',price:29.94},diesel_b20:{stock:'low',price:28.04},g95:{stock:'ok',price:40.62},
+          g91:{stock:'ok',price:35.62},e20:{stock:'ok',price:33.44},e85:{stock:'ok',price:22.34},lpg:{stock:'out',price:18.13}},
+   updated:'วันนี้ 09:15'},
+  {id:3,name:'PTT สาขา บึงพระ',lat:16.7868,lng:100.3182,
+   fuels:{diesel:{stock:'ok',price:29.94},diesel_b20:{stock:'ok',price:28.04},g95:{stock:'ok',price:40.62},
+          g91:{stock:'out',price:35.62},e20:{stock:'low',price:33.44},e85:{stock:'ok',price:22.34},lpg:{stock:'ok',price:18.13}},
+   updated:'เมื่อวาน 18:00'},
+  {id:4,name:'PTT สาขา แยกบ้านกร่าง',lat:16.8089,lng:100.1846,
+   fuels:{diesel:{stock:'ok',price:29.94},diesel_b20:{stock:'ok',price:28.04},g95:{stock:'low',price:40.62},
+          g91:{stock:'ok',price:35.62},e20:{stock:'ok',price:33.44},e85:{stock:'out',price:22.34},lpg:{stock:'ok',price:18.13}},
+   updated:'วันนี้ 07:45'},
+  {id:5,name:'PTT สาขา สนามบินพิษณุโลก',lat:16.7839,lng:100.2774,
+   fuels:{diesel:{stock:'ok',price:29.94},diesel_b20:{stock:'ok',price:28.04},g95:{stock:'ok',price:40.62},
+          g91:{stock:'ok',price:35.62},e20:{stock:'ok',price:33.44},e85:{stock:'ok',price:22.34},lpg:{stock:'ok',price:18.13}},
+   updated:'วันนี้ 10:00'},
+];
+
+let map, markersLayer, markerMap = {};
+
+// ── Dynamic Leaflet loader ──
+function loadCSS(href){
+  const l=document.createElement('link');l.rel='stylesheet';l.href=href;document.head.appendChild(l);
+}
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);
+  });
+}
+
+async function initMap(){
+  try {
+    loadCSS('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
+    await loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js');
+    document.getElementById('loadingMap').style.display='none';
+
+    map = L.map('map').setView([16.82,100.26],12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      attribution:'© <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',maxZoom:19
+    }).addTo(map);
+    markersLayer = L.layerGroup().addTo(map);
+    renderMarkers();
+
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(p=>{
+        const icon=L.divIcon({html:'<div class="user-dot"></div>',className:'',iconSize:[16,16],iconAnchor:[8,8]});
+        L.marker([p.coords.latitude,p.coords.longitude],{icon}).addTo(map).bindPopup('📍 ตำแหน่งของคุณ');
+      },()=>{});
+    }
+  } catch(e){
+    document.getElementById('loadingMap').innerHTML=
+      '<div style="color:#e8001c;font-size:13px">⚠️ โหลดแผนที่ไม่ได้<br><small>กรุณาเชื่อมต่ออินเทอร์เน็ต</small></div>';
+  }
+}
+
+function pttIcon(hasOut){
+  const c=hasOut?'#e8001c':'#003087';
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="34" height="42" viewBox="0 0 34 42">
+    <path d="M17 0C7.6 0 0 7.6 0 17c0 13 17 25 17 25S34 30 34 17C34 7.6 26.4 0 17 0z" fill="${c}"/>
+    <circle cx="17" cy="17" r="10" fill="white"/>
+    <text x="17" y="21" text-anchor="middle" font-size="9" font-weight="bold" fill="${c}" font-family="Arial">PTT</text>
+  </svg>`;
+  return L.divIcon({html:svg,iconSize:[34,42],iconAnchor:[17,42],popupAnchor:[0,-44],className:''});
+}
+
+function sL(s){
+  if(s==='ok')  return '<span style="color:#00b86b;font-weight:700">✓ มี</span>';
+  if(s==='low') return '<span style="color:#ff8c00;font-weight:700">⚠ น้อย</span>';
+  return '<span style="color:#e8001c;font-weight:700">✗ หมด</span>';
+}
+
+function buildPopup(st){
+  return `<div style="min-width:230px;font-family:Prompt,sans-serif">
+    <div style="font-weight:700;color:#003087;font-size:13px;margin-bottom:8px;padding-bottom:8px;border-bottom:2px solid #eef2f8">⛽ ${st.name}</div>
+    ${FUELS.map(f=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #f0f4f8">
+      <span style="color:#555">${f.label}</span>
+      <span style="margin:0 8px;font-weight:700">${st.fuels[f.key].price.toFixed(2)} ฿</span>
+      ${sL(st.fuels[f.key].stock)}</div>`).join('')}
+    <div style="font-size:10px;color:#aaa;margin-top:8px">🕐 ${st.updated}</div>
+  </div>`;
+}
+
+function renderMarkers(){
+  if(!markersLayer) return;
+  markersLayer.clearLayers(); markerMap={};
+  stations.forEach(st=>{
+    const hasOut=Object.values(st.fuels).some(f=>f.stock==='out');
+    markerMap[st.id]=L.marker([st.lat,st.lng],{icon:pttIcon(hasOut)})
+      .addTo(markersLayer).bindPopup(buildPopup(st),{maxWidth:280});
+  });
+}
+
+function renderList(){
+  document.getElementById('pumpList').innerHTML=stations.map(st=>`
+    <div class="pump-card" onclick="focusStation(${st.id})">
+      <div class="pump-name">⛽ ${st.name}</div>
+      ${FUELS.map(f=>`<div class="fuel-row">
+        <span class="fuel-name">${f.label}</span>
+        <span class="fuel-price">${st.fuels[f.key].price.toFixed(2)} ฿</span>
+        <span class="fuel-stock ${st.fuels[f.key].stock==='ok'?'stock-ok':st.fuels[f.key].stock==='low'?'stock-low':'stock-out'}">
+          ${st.fuels[f.key].stock==='ok'?'✓ มี':st.fuels[f.key].stock==='low'?'⚠ น้อย':'✗ หมด'}
+        </span></div>`).join('')}
+      <div class="updated-at">🕐 อัปเดตล่าสุด: ${st.updated}</div>
+    </div>`).join('');
+}
+
+function renderPriceTable(){
+  document.getElementById('priceTable').innerHTML=FUELS.map(f=>{
+    const prices=stations.map(st=>st.fuels[f.key].price);
+    const avg=(prices.reduce((a,b)=>a+b,0)/prices.length).toFixed(2);
+    const min=Math.min(...prices).toFixed(2),max=Math.max(...prices).toFixed(2);
+    return `<div style="background:#f8fafd;border:1.5px solid #e2e8f5;border-radius:10px;padding:12px 14px;margin-bottom:10px">
+      <div style="font-weight:700;color:#003087;margin-bottom:8px;font-size:13px">⛽ ${f.label}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;text-align:center;font-size:12px">
+        <div><div style="color:#aaa;font-size:10px">ต่ำสุด</div><div style="color:#00b86b;font-weight:700">${min} ฿</div></div>
+        <div><div style="color:#aaa;font-size:10px">เฉลี่ย</div><div style="font-weight:700">${avg} ฿</div></div>
+        <div><div style="color:#aaa;font-size:10px">สูงสุด</div><div style="color:#e8001c;font-weight:700">${max} ฿</div></div>
+      </div></div>`;
+  }).join('');
+}
+
+function focusStation(id){
+  if(!map||!markerMap[id]) return;
+  const st=stations.find(s=>s.id===id);
+  map.setView([st.lat,st.lng],15); markerMap[id].openPopup();
+}
+
+function switchTab(name,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('listTab').style.display=name==='list'?'block':'none';
+  document.getElementById('priceTab').style.display=name==='price'?'block':'none';
+}
+
+function openModal(){
+  const sel=document.getElementById('selectStation');
+  sel.innerHTML='<option value="">-- กรุณาเลือกสาขา --</option>'+
+    stations.map(st=>`<option value="${st.id}">${st.name}</option>`).join('');
+  document.getElementById('fuelForms').innerHTML='';
+  document.getElementById('overlay').classList.add('open');
+}
+function closeOverlay(){document.getElementById('overlay').classList.remove('open')}
+function closeModal(e){if(e.target===document.getElementById('overlay'))closeOverlay()}
+
+function buildFuelForms(){
+  const id=parseInt(document.getElementById('selectStation').value);
+  if(!id){document.getElementById('fuelForms').innerHTML='';return;}
+  const st=stations.find(s=>s.id===id);
+  document.getElementById('fuelForms').innerHTML=
+    '<div style="margin:16px 0 8px;border-top:1px solid #eef2f8;padding-top:16px">'+
+    FUELS.map(f=>{
+      const fd=st.fuels[f.key];
+      const chips=['ok','low','out'].map(s=>{
+        const lbl={ok:'✓ มี',low:'⚠ น้อย',out:'✗ หมด'}[s];
+        return `<button type="button" class="stock-chip ${s}${fd.stock===s?' selected':''}"
+          onclick="selectChip(this,'${f.key}')">${lbl}</button>`;
+      }).join('');
+      return `<div class="fuel-section">
+        <div class="fuel-section-title" style="color:${f.color}">⛽ ${f.label}</div>
+        <div class="fuel-inputs">
+          <div><label class="form-label">ราคา (฿/ลิตร)</label>
+            <input type="number" step="0.01" class="form-input" id="price_${f.key}" value="${fd.price.toFixed(2)}"></div>
+          <div><label class="form-label">สถานะสต็อก</label>
+            <div class="stock-options" id="chips_${f.key}">${chips}</div></div>
+        </div></div>`;
+    }).join('')+'</div>';
+}
+
+function selectChip(btn,fuelKey){
+  document.querySelectorAll(`#chips_${fuelKey} .stock-chip`).forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function submitUpdate(){
+  const id=parseInt(document.getElementById('selectStation').value);
+  if(!id){alert('กรุณาเลือกสาขาก่อน');return;}
+  const st=stations.find(s=>s.id===id);
+  FUELS.forEach(f=>{
+    const el=document.getElementById('price_'+f.key);
+    if(el){const v=parseFloat(el.value);if(!isNaN(v)&&v>0)st.fuels[f.key].price=v;}
+    const sel=document.querySelector(`#chips_${f.key} .stock-chip.selected`);
+    if(sel)st.fuels[f.key].stock=sel.classList.contains('ok')?'ok':sel.classList.contains('low')?'low':'out';
+  });
+  const now=new Date();
+  st.updated=`วันนี้ ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  renderList();renderMarkers();renderPriceTable();closeOverlay();
+  const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// Boot
+renderList();
+renderPriceTable();
+initMap();
+</script>
+</body>
+</html>
